@@ -90,6 +90,21 @@ func handlerReset(s *state, cmd command) error {
 	return err
 }
 
+func handlerUsers(s *state, cmd command) error {
+	users, err := s.dbq.GetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		if user.Name == s.cfg.Username {
+			fmt.Println("*", user.Name, "(current)")
+		} else {
+			fmt.Println("*", user.Name)
+		}
+	}
+	return nil
+}
+
 func main() {
 	cfg := config.Read()
 	db, err := sql.Open("postgres", cfg.DBUrl)
@@ -108,6 +123,7 @@ func main() {
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerReset)
+	cmds.register("users", handlerUsers)
 	args := os.Args
 	if len(args) < 2 {
 		fmt.Println("Require an argument, received", len(args)-1)
