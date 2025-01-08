@@ -80,6 +80,16 @@ func handlerRegister(s *state, cmd command) error {
 	return nil
 }
 
+func handlerReset(s *state, cmd command) error {
+	err := s.dbq.ClearUsers(context.Background())
+	if err != nil {
+		fmt.Println("Unable to clear users from database")
+	} else {
+		fmt.Println("Cleared users from database")
+	}
+	return err
+}
+
 func main() {
 	cfg := config.Read()
 	db, err := sql.Open("postgres", cfg.DBUrl)
@@ -97,6 +107,7 @@ func main() {
 	}
 	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
+	cmds.register("reset", handlerReset)
 	args := os.Args
 	if len(args) < 2 {
 		fmt.Println("Require an argument, received", len(args)-1)
