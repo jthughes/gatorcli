@@ -38,9 +38,9 @@ func Read() Config {
 	return cfg
 }
 
-func (config *Config) SetUser(user string) {
+func (config *Config) SetUser(user string) error {
 	config.Username = user
-	write(*config)
+	return write(*config)
 }
 
 func getConfigFilePath() (string, error) {
