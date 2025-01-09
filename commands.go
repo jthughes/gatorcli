@@ -130,3 +130,21 @@ func handlerAddFeed(s *state, cmd command) error {
 	fmt.Printf("%+v\n", feed)
 	return nil
 }
+
+func handlerGetFeeds(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+		return fmt.Errorf("expected no arguments")
+	}
+	feeds, err := s.dbq.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("unable to get feeds from database: %w", err)
+	}
+	for _, feed := range feeds {
+		user, err := s.dbq.GetFeedUser(context.Background(), feed.Url)
+		if err != nil {
+			return fmt.Errorf("unable to find user from feed: %w", err)
+		}
+		fmt.Printf("* Name: '%s' URL: '%s' Added by: '%s'\n", feed.Name, feed.Url, user)
+	}
+	return nil
+}

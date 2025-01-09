@@ -36,6 +36,7 @@ func main() {
 	cmds.register("users", handlerUsers)
 	cmds.register("agg", handlerAggregator)
 	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("feeds", handlerGetFeeds)
 	args := os.Args
 	if len(args) < 2 {
 		fmt.Println("Require an argument, received", len(args)-1)
