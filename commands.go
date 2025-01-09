@@ -106,28 +106,24 @@ func handlerAggregator(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, loggedInUser database.User) error {
 	if len(cmd.args) != 2 {
 		return fmt.Errorf("wrong number of arguments: expected 'addfeed <name> <url>")
 	}
 	name, url := cmd.args[0], cmd.args[1]
-	user, err := s.dbq.GetUser(context.Background(), s.cfg.Username)
-	if err != nil {
-		return fmt.Errorf("user not found in database: %w", err)
-	}
 	feed, err := s.dbq.AddFeed(context.Background(), database.AddFeedParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 		Name:      name,
 		Url:       url,
-		UserID:    user.ID,
+		UserID:    loggedInUser.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to add feed: %w", err)
 	}
 	fmt.Println("Successfully added feed")
-	return handlerFollow(s, command{
+	return middlewareLoggedIn(handlerFollow)(s, command{
 		name: "follow",
 		args: []string{feed.Url},
 	})
@@ -151,7 +147,7 @@ func handlerGetFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, loggedInUser database.User) error {
 	if len(cmd.args) != 1 {
 		return fmt.Errorf("wrong number of arguments: expected 'follow <url>")
 	}
@@ -160,15 +156,11 @@ func handlerFollow(s *state, cmd command) error {
 	if err != nil {
 		return fmt.Errorf("feed url not found: %w", err)
 	}
-	user, err := s.dbq.GetUser(context.Background(), s.cfg.Username)
-	if err != nil {
-		return fmt.Errorf("logged in user not found: %w", err)
-	}
 	follow, err := s.dbq.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		UserID:    user.ID,
+		UserID:    loggedInUser.ID,
 		FeedID:    feed.ID,
 	})
 	if err != nil {
@@ -190,5 +182,21 @@ func handlerFollowing(s *state, cmd command) error {
 	for _, feed := range follows {
 		fmt.Printf("* %s\n", feed.FeedName)
 	}
+	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, loggedInUser database.User) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("expected one argument: unfollow <feed_url>")
+	}
+	url := cmd.args[0]
+	err := s.dbq.UnfollowFeed(context.Background(), database.UnfollowFeedParams{
+		Name: loggedInUser.Name,
+		Url:  url,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to unfollow feed: %w", err)
+	}
+	fmt.Printf("%s unfollowed feed at '%s'\n", loggedInUser.Name, url)
 	return nil
 }
