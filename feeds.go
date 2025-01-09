@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
 	"fmt"
 	"html"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/jthughes/gatorcli/internal/database"
 )
 
 type RSSFeed struct {
@@ -56,4 +60,29 @@ func fetchFeed(ctx context.Context, feedUrl string) (*RSSFeed, error) {
 		feed.Channel.Item[index].Description = html.UnescapeString(item.Description)
 	}
 	return &feed, nil
+}
+
+func scrapeFeeds(ctx context.Context, s *state) error {
+	feedEntry, err := s.dbq.GetNextFeedToFetch(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to fetch next feed: %w", err)
+	}
+	err = s.dbq.MarkFeedFetch(ctx, database.MarkFeedFetchParams{
+		LastFetchedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		ID: feedEntry.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to mark fetched feed as fetched: %w", err)
+	}
+	feed, err := fetchFeed(ctx, feedEntry.Url)
+	if err != nil {
+		return fmt.Errorf("unable to fetch feed from url: %w", err)
+	}
+	for _, item := range feed.Channel.Item {
+		fmt.Println("Found post: %s\n", item.Title)
+	}
+	return nil
 }
