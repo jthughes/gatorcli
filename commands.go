@@ -127,8 +127,10 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("unable to add feed: %w", err)
 	}
 	fmt.Println("Successfully added feed")
-	fmt.Printf("%+v\n", feed)
-	return nil
+	return handlerFollow(s, command{
+		name: "follow",
+		args: []string{feed.Url},
+	})
 }
 
 func handlerGetFeeds(s *state, cmd command) error {
@@ -145,6 +147,48 @@ func handlerGetFeeds(s *state, cmd command) error {
 			return fmt.Errorf("unable to find user from feed: %w", err)
 		}
 		fmt.Printf("* Name: '%s' URL: '%s' Added by: '%s'\n", feed.Name, feed.Url, user)
+	}
+	return nil
+}
+
+func handlerFollow(s *state, cmd command) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("wrong number of arguments: expected 'follow <url>")
+	}
+	feedUrl := cmd.args[0]
+	feed, err := s.dbq.GetFeedByURL(context.Background(), feedUrl)
+	if err != nil {
+		return fmt.Errorf("feed url not found: %w", err)
+	}
+	user, err := s.dbq.GetUser(context.Background(), s.cfg.Username)
+	if err != nil {
+		return fmt.Errorf("logged in user not found: %w", err)
+	}
+	follow, err := s.dbq.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID:    user.ID,
+		FeedID:    feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to create new feed follow: %w", err)
+	}
+	fmt.Printf("'%s' successfully followed '%s' feed\n", follow.UserName, follow.FeedName)
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+		return fmt.Errorf("expected no arguments, received %d", len(cmd.args))
+	}
+	follows, err := s.dbq.GetFeedFollowsForUser(context.Background(), s.cfg.Username)
+	if err != nil {
+		return fmt.Errorf("current user follows not found: %w", err)
+	}
+	fmt.Printf("%s's feeds:\n", s.cfg.Username)
+	for _, feed := range follows {
+		fmt.Printf("* %s\n", feed.FeedName)
 	}
 	return nil
 }
