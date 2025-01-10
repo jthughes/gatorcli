@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -115,7 +116,6 @@ func handlerAggregator(s *state, cmd command) error {
 			return fmt.Errorf("failed to scrape feed: %w", err)
 		}
 	}
-	return nil
 }
 
 func handlerAddFeed(s *state, cmd command, loggedInUser database.User) error {
@@ -210,5 +210,33 @@ func handlerUnfollow(s *state, cmd command, loggedInUser database.User) error {
 		return fmt.Errorf("unable to unfollow feed: %w", err)
 	}
 	fmt.Printf("%s unfollowed feed at '%s'\n", loggedInUser.Name, url)
+	return nil
+}
+
+func handlerBrowse(s *state, cmd command, loggedInUser database.User) error {
+	if len(cmd.args) > 1 {
+		return fmt.Errorf("too many argurments: browse (<limit>)")
+	}
+	limit := 2
+	if len(cmd.args) == 1 {
+		i, err := strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return fmt.Errorf("argument %s not recognised as integer: %w", cmd.args[0], err)
+		}
+		limit = i
+	}
+	posts, err := s.dbq.GetUserPosts(context.Background(), database.GetUserPostsParams{
+		UserID: loggedInUser.ID,
+		Limit:  int32(limit),
+	})
+	if err != nil {
+		return fmt.Errorf("unable to retrieve user's posts: %w", err)
+	}
+	for _, item := range posts {
+		fmt.Printf("\"%s\" <%s>\n", item.Title, item.Url)
+		fmt.Println("Posted at:", item.PublishedAt)
+		fmt.Println(item.Description)
+		fmt.Println("")
+	}
 	return nil
 }

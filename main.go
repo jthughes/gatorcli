@@ -40,6 +40,7 @@ func main() {
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
 	cmds.register("following", handlerFollowing)
 	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	cmds.register("browse", middlewareLoggedIn(handlerBrowse))
 	args := os.Args
 	if len(args) < 2 {
 		fmt.Println("Require an argument, received", len(args)-1)
