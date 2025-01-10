@@ -25,3 +25,4 @@ Gator is a CLI app built in Go that allows multiple users to register, follow, a
 - ``follow <feed_url>``: Follows a feed that has already been registered by the ``addfeed`` command.
 - ``following``: Lists all feeds that the current user is following.
 - ``unfollow <feed_url>``: Unfollows a feed.
+- ``browse (<limit>)``: Displays ``<limit>`` amount of posts (2 if unspecified).
